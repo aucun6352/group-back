@@ -1,0 +1,44 @@
+# Only for dev, test
+version: "3.4"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/app/Dockerfile
+    image: group-rust:1.60.0-slim
+    command: cargo run
+    volumes:
+      - app-data-1:/var/www/app
+      - cargo-cache:/root/.cargo # $HOME/. cargo
+    ports:
+      - 8000:8000
+    links:
+      - db
+
+  db:
+    platform: linux/x86_64
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - database-data:/var/lib/mysql
+    expose:
+      - 3306
+    environment:
+      MYSQL_ROOT_PASSWORD: group
+      MYSQL_DATABASE: group_dev
+
+  # web:
+  #   image: nginx:1.20
+  #   ports:
+  #     - 4000:80
+  #   depends_on:
+  #     - app
+
+volumes:
+  app-data-1:
+    driver_opts:
+      type: none
+      device: ${PWD}
+      o: bind
+  cargo-cache: null
+  database-data: null
