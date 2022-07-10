@@ -6,12 +6,14 @@ services:
       context: .
       dockerfile: ./docker/app/Dockerfile
     image: group-rust:1.60.0-slim
-    command: cargo run
+    command: cargo run .
     volumes:
       - app-data-1:/var/www/app
-      - cargo-cache:/root/.cargo # $HOME/. cargo
+      - cargo-cache:/root/target # $HOME/. cargo
     ports:
       - 8000:8000
+    environment:
+      - CARGO_TARGET_DIR=/root/target
     links:
       - db
 
@@ -21,18 +23,18 @@ services:
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - database-data:/var/lib/mysql
-    expose:
-      - 3306
+    ports:
+      - 3306:3306
     environment:
       MYSQL_ROOT_PASSWORD: group
-      MYSQL_DATABASE: group_dev
+      MYSQL_DATABASE: group
 
-  # web:
-  #   image: nginx:1.20
-  #   ports:
-  #     - 4000:80
-  #   depends_on:
-  #     - app
+  web:
+    image: nginx:1.20
+    ports:
+      - 4000:80
+    depends_on:
+      - app
 
 volumes:
   app-data-1:

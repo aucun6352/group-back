@@ -5,5 +5,27 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# [profile.release]
+# panic = 'abort'
+
+# [dev-dependencies]
+# sea-orm = { version = "^0", features = [ "sqlx-mysql", "runtime-tokio-native-tls", "macros", "debug-print" ] }
+
+[workspace]
+members = [".", "entity", "migration"]
+
 [dependencies]
-rocket = "0.5.0-rc.2"
+rocket = { version = "0.5.0-rc.2", features = ["secrets"] }
+entity = { path = "entity" }
+migration = { path = "migration" }
+
+[dependencies.sea-orm-rocket]
+git = "https://github.com/SeaQL/sea-orm"
+
+[dependencies.sea-orm]
+version = "^0"
+features = [
+  "runtime-tokio-native-tls",
+  "sqlx-mysql"
+]
+
