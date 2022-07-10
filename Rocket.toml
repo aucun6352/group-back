@@ -2,4 +2,4 @@
 address = "0.0.0.0"
 
 [default.databases.sea_orm]
-url = "mysql://root:group@localhost:3306"
+url = "mysql://root:group@localhost/group"
