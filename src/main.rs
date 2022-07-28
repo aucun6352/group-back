@@ -1,17 +1,18 @@
 #[macro_use]
 extern crate rocket;
 use rocket::{Rocket, Build, fairing::{self, AdHoc}};
+use rocket::form::{Context, Form};
 
-use migration::MigratorTrait;
-use sea_orm::{entity::*};
+use rocket::serde::{Serialize, json::Json};
+
+use migration::{MigratorTrait, tests_cfg::json};
+use sea_orm::{entity::*, QueryFilter};
 
 mod pool;
 use pool::Db;
 use sea_orm_rocket::{Database, Connection};
 
 pub use entity::*;
-
-use rocket::serde::json::Json;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -22,9 +23,52 @@ fn index() -> &'static str {
 async fn users(conn: Connection<'_, Db>) -> Json<usize> {
     let db = conn.into_inner();
 
-    let post: Vec<user::Model> = user::Entity::find().all(db).await.expect("could not find post");
+    let users: Vec<user::Model> = user::Entity::find().all(db).await.expect("could not find post");
 
-    Json(post.len())
+    Json(users.len())
+}
+
+#[post("/users", data = "<user_form>")]
+async fn sign_up(conn: Connection<'_, Db>, user_form: Form<user::Model>) -> &'static str {
+    let db = conn.into_inner();
+
+    let form = user_form.into_inner();
+
+    user::ActiveModel {
+        email: Set(form.email.to_owned()),
+        password: Set(form.password.to_owned()),
+        name: Set(form.name.to_owned()),
+        ..Default::default()
+    }
+    .save(db)
+    .await
+    .expect("could not insert post");
+
+    "OK"
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+struct User { 
+    email: String,
+    name: String,
+ }
+
+#[post("/users/login", data = "<user_form>")]
+async fn login(conn: Connection<'_, Db>, user_form: Form<user::Model>) -> &'static str {
+    let db = conn.into_inner();
+
+    let user: Option<user::Model> = user::Entity::find()
+        .filter(user::Column::Email.eq(&*user_form.email))
+        .filter(user::Column::Password.eq(&*user_form.password))
+        .one(db)
+        .await
+        .expect("could not insert post");
+
+    match user {
+        Some(user::Model { id, email, name, password }) => "OK",
+        None => panic!("no_user")
+    }
 }
 
 
@@ -39,5 +83,5 @@ fn rocket() -> _ {
     rocket::build()
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
-        .mount("/", routes![index, users])
+        .mount("/", routes![index, users, sign_up, login])
 }

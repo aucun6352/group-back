@@ -2,7 +2,7 @@
 
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, rocket::FromForm)]
 #[sea_orm(table_name = "user")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -11,8 +11,8 @@ pub struct Model {
     pub email: String,
     pub name: String,
     pub password: String,
-    pub updated_at: DateTime,
-    pub created_at: DateTime,
+    // pub updated_at: DateTime,
+    // pub created_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]
