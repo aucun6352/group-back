@@ -4,3 +4,4 @@ pub mod prelude;
 
 pub mod seaql_migrations;
 pub mod user;
+pub mod user_register_cache;

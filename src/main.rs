@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate rocket;
-use rocket::{Rocket, Build, fairing::{self, AdHoc}};
+use rocket::{Rocket, Build, fairing::{self, AdHoc}, serde::Deserialize};
 use rocket::form::{Context, Form};
 
 use rocket::serde::{Serialize, json::Json};
@@ -47,6 +47,30 @@ async fn sign_up(conn: Connection<'_, Db>, user_form: Form<user::Model>) -> &'st
     "OK"
 }
 
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct UserEmailRequest<'r> {
+    email: &'r str,
+}
+
+#[post("/users/email", data = "<user_form>")]
+async fn sign_up_email(conn: Connection<'_, Db>, user_form: Json<UserEmailRequest<'_>>) -> &'static str {
+    let db = conn.into_inner();
+
+    let form = user_form.into_inner();
+
+    user_register_cache::ActiveModel {
+        email: Set(form.email.to_owned()),
+        code: Set("COCOCODE".to_owned()),
+        ..Default::default()
+    }.save(db)
+    .await
+    .unwrap();
+
+    "OK"
+}
+
+
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 struct User { 
@@ -83,5 +107,5 @@ fn rocket() -> _ {
     rocket::build()
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
-        .mount("/", routes![index, users, sign_up, login])
+        .mount("/", routes![index, users, sign_up, sign_up_email, login])
 }
