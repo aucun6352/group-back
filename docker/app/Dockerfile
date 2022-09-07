@@ -1,12 +1,11 @@
-FROM rust:alpine3.16
+FROM rust:1.63.0-slim
 LABEL maintainer="aucun6352@gmail.com"
 LABEL name="group"
 
-ARG UTILS="pkgconfig musl-dev openssl-dev"
+ARG UTILS="pkg-config libssl-dev netcat"
 
-RUN apk update \
-    && apk upgrade \
-    && apk add --update --no-cache $UTILS
+RUN apt-get update \
+    && apt-get install -y $UTILS
 
 ENV WORK_ROOT=/var/www/app
 
@@ -15,6 +14,4 @@ WORKDIR $WORK_ROOT
 VOLUME $WORK_ROOT
 
 COPY . .
-RUN cargo install --path .
-
 ENTRYPOINT ["./docker/app/docker-entry.sh"]

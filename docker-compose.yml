@@ -5,20 +5,22 @@ services:
     build:
       context: .
       dockerfile: ./docker/app/Dockerfile
-    image: group-rust:1.60.0-slim
+    image: group-rust:development
     command: cargo run .
+    # command: tail -f /dev/null
     volumes:
       - app-data-1:/var/www/app
-      - cargo-cache:/root/target # $HOME/. cargo
+      - cargo-cache:/var/www/target # $HOME/. cargo
     ports:
       - 8000:8000
     environment:
-      - CARGO_TARGET_DIR=/root/target
+      - CARGO_TARGET_DIR=/var/www/target
+      - ROCKET_ENV=development
     links:
       - db
 
   db:
-    platform: linux/x86_64
+    # platform: linux/x86_64
     image: mysql:8.0
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
