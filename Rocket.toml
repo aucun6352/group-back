@@ -1,9 +1,9 @@
 [default]
-address = "127.0.0.1"
+address = "0.0.0.0"
 
 [default.databases.sea_orm]
 url = "mysql://root:group@localhost/group"
 
-[development]
-# address = "0.0.0.0"
-url = "mysql://root:group@db/group"
+# [development]
+# databases = { sea_orm = {url = "mysql://root:group@db/group"} }
+# url = "mysql://root:group@db/group"

@@ -16,6 +16,7 @@ services:
     environment:
       - CARGO_TARGET_DIR=/var/www/target
       - ROCKET_ENV=development
+      - ROCKET_DATABASES={ sea_orm = {url = "mysql://root:group@db/group"} }
     links:
       - db
 
@@ -31,12 +32,12 @@ services:
       MYSQL_ROOT_PASSWORD: group
       MYSQL_DATABASE: group
 
-  web:
-    image: nginx:1.20
-    ports:
-      - 4000:80
-    depends_on:
-      - app
+  # web:
+  #   image: nginx:1.20
+  #   ports:
+  #     - 4000:80
+  #   depends_on:
+  #     - app
 
 volumes:
   app-data-1:
