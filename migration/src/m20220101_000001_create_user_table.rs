@@ -25,8 +25,8 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(User::Email).string().not_null().unique_key())
                 .col(ColumnDef::new(User::Name).string().not_null())
                 .col(ColumnDef::new(User::Password).string().not_null())
-                // .col(ColumnDef::new(User::UpdatedAt).date_time().not_null())
-                // .col(ColumnDef::new(User::CreatedAt).date_time().not_null())
+                .col(ColumnDef::new(User::UpdatedAt).timestamp().not_null().extra("DEFAULT CURRENT_TIMESTAMP".to_owned()))
+                .col(ColumnDef::new(User::CreatedAt).timestamp().not_null().extra("DEFAULT CURRENT_TIMESTAMP".to_owned()))
                 .to_owned()
         ).await
     }
