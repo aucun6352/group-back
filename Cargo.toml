@@ -20,14 +20,16 @@ entity = { path = "entity" }
 migration = { path = "migration" }
 rocket = { version = "0.5.0-rc.2", features = ["secrets", "json"] }
 serde = { version = "^1", features = ["derive"] }
-rocket_okapi = { version = "0.8.0-rc.2", features = ["swagger", "rapidoc", "rocket_db_pools"] }
+schemars = "0.8.10"
+okapi = { version = "0.7.0-rc.1" }
+rocket_okapi = { version = "0.8.0-rc.2", features = ["swagger"] }
 lettre = {version= "0.10", features= ["sendmail-transport"]} # smtp 메일러
 rand = "0.8.5" # 랜덤
 
 [dependencies.sea-orm]
 version = "^0"
 features = [
-  "runtime-async-std-native-tls",
+  "runtime-tokio-native-tls",
   "sqlx-mysql",
   # "macros",
 ]

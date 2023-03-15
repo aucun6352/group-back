@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate rocket;
-use entity::user_register_cache::ActiveModel;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::{
     fairing::{self, AdHoc},
@@ -8,13 +7,8 @@ use rocket::{
     Build, Rocket,
 };
 
-use rocket_okapi::okapi::schemars;
-use rocket_okapi::okapi::schemars::JsonSchema;
-use rocket_okapi::settings::UrlObject;
-use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
-
 use migration::MigratorTrait;
-use sea_orm::{entity::*, DatabaseConnection};
+use sea_orm::{entity::*, DatabaseConnection, QueryFilter};
 
 mod pool;
 use pool::Db;
@@ -25,10 +19,12 @@ pub use entity::*;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{Message, Transport};
+use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
+use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 use lettre::transport::sendmail::SendmailTransport;
+use lettre::{Message, Transport};
 
+mod ex_attr;
 
 /// # API 테스트
 #[openapi(tag = "User")]
@@ -43,6 +39,8 @@ fn index() -> &'static str {
 async fn users(conn: Connection<'_, Db>) -> Json<usize> {
     let db = conn.into_inner();
 
+    
+
     let users: Vec<user::Model> = user::Entity::find()
         .all(db)
         .await
@@ -51,10 +49,20 @@ async fn users(conn: Connection<'_, Db>) -> Json<usize> {
     Json(users.len())
 }
 
+
+
 #[derive(FromForm, JsonSchema, Serialize, Deserialize)]
 struct UserForm {
+    /// 유저 이메일
+    #[schemars(example = "ex_attr::email")]
     email: String,
+    /// 인증 코드
+    #[schemars(example = "ex_attr::code")]
+    code: String,
+    /// 계정 비밀번호
     password: String,
+    /// 유저 이름
+    #[schemars(example = "ex_attr::user_name")]
     name: String,
 }
 
@@ -66,27 +74,41 @@ async fn sign_up(conn: Connection<'_, Db>, user_form: Json<UserForm>) -> Status 
 
     let request_data: UserForm = user_form.into_inner();
 
+    let code_cache = user_register_cache::Entity::find()
+        .filter(user_register_cache::Column::Code.eq(request_data.code))
+        .filter(user_register_cache::Column::Email.eq(request_data.email.to_owned()))
+        .one(db)
+        .await
+        .unwrap();
+
+    // code_cache.exists();
+
+    if let None = code_cache {
+        return Status::BadRequest;
+    }
+
     user::ActiveModel {
         email: Set(request_data.email.to_owned()),
-        password: Set(request_data.password.to_owned()),
         name: Set(request_data.name.to_owned()),
+        password: Set(request_data.password.to_owned()),
         ..Default::default()
     }
     .save(db)
     .await
     .unwrap();
 
-    Status::NoContent
+    Status::Created
 }
 
 #[derive(FromForm, JsonSchema, Serialize, Deserialize)]
 struct UserEmailRequest {
+    #[schemars(example = "ex_attr::email")]
     email: String,
 }
 
 /// # 유저 이메일 확인 코드 보내기
 #[openapi(tag = "User")]
-#[post("/users/email", data = "<user_form>")]
+#[post("/users/validate_email", data = "<user_form>")]
 async fn sign_up_email(conn: Connection<'_, Db>, user_form: Json<UserEmailRequest>) -> Status {
     let db: &DatabaseConnection = conn.into_inner();
 
@@ -98,7 +120,7 @@ async fn sign_up_email(conn: Connection<'_, Db>, user_form: Json<UserEmailReques
         .map(char::from)
         .collect();
 
-    let user_register_cache: ActiveModel = user_register_cache::ActiveModel {
+    let user_register_cache = user_register_cache::ActiveModel {
         email: Set(request_data.email.to_owned()),
         code: Set(rand_code),
         ..Default::default()
@@ -127,19 +149,40 @@ async fn sign_up_email(conn: Connection<'_, Db>, user_form: Json<UserEmailReques
 
 #[derive(FromForm, JsonSchema, Serialize, Deserialize)]
 struct CheckEmailCodeRequest {
+    #[schemars(example = "ex_attr::email")]
     email: String,
-    code: String
+    #[schemars(example = "ex_attr::code")]
+    code: String,
 }
 /// # 유저 이메일 코드 확인
 #[openapi(tag = "User")]
-#[post("/users/email/code", data = "<user_form>")]
-async fn check_email_code(conn: Connection<'_, Db>, user_form: Json<CheckEmailCodeRequest>) -> Status {
+#[post("/users/validate_code", data = "<user_form>")]
+async fn check_email_code(
+    conn: Connection<'_, Db>,
+    user_form: Json<CheckEmailCodeRequest>,
+) -> Status {
     let db: &DatabaseConnection = conn.into_inner();
 
     let request_data: CheckEmailCodeRequest = user_form.into_inner();
 
+    // let is_exists_email = user_register_cache::Entity::find()
+    //     .filter(user_register_cache::Column::Code.eq(request_data.code))
+    //     .filter(user_register_cache::Column::Email.eq(request_data.email))
+    //     .query().limit(1).clear_selects();
 
-    Status::NoContent
+    let code_cache = user_register_cache::Entity::find()
+        .filter(user_register_cache::Column::Code.eq(request_data.code))
+        .filter(user_register_cache::Column::Email.eq(request_data.email))
+        .one(db)
+        .await
+        .unwrap()
+        .is_some();
+
+    match code_cache {
+        true => Status::Ok,
+        false => Status::BadRequest,
+    }
+
 }
 
 // #[derive(Serialize)]
@@ -179,27 +222,12 @@ fn rocket() -> _ {
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
         .mount(
             "/",
-            openapi_get_routes![index, users, sign_up_email, sign_up],
+            openapi_get_routes![index, users, sign_up_email, sign_up, check_email_code],
         )
         .mount(
             "/swagger-ui/",
             make_swagger_ui(&SwaggerUIConfig {
                 url: "../openapi.json".to_owned(),
-                ..Default::default()
-            }),
-        )
-        .mount(
-            "/rapidoc/",
-            make_rapidoc(&RapiDocConfig {
-                general: GeneralConfig {
-                    spec_urls: vec![UrlObject::new("General", "../openapi.json")],
-                    ..Default::default()
-                },
-                hide_show: HideShowConfig {
-                    allow_spec_url_load: false,
-                    allow_spec_file_load: false,
-                    ..Default::default()
-                },
                 ..Default::default()
             }),
         )

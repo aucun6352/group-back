@@ -11,8 +11,8 @@ pub struct Model {
     pub email: String,
     pub name: String,
     pub password: String,
-    pub created_at: DateTimeUtc,
-    pub updated_at: DateTimeUtc,
+    pub created_at: TimeDateTime,
+    pub updated_at: TimeDateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

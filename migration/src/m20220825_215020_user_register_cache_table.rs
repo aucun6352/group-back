@@ -19,6 +19,8 @@ impl MigrationTrait for Migration {
                 )
                 .col(ColumnDef::new(UserRegisterCache::Email).string().not_null())
                 .col(ColumnDef::new(UserRegisterCache::Code).string())
+                .col(ColumnDef::new(UserRegisterCache::UpdatedAt).timestamp().not_null().extra("DEFAULT CURRENT_TIMESTAMP".to_owned()))
+                .col(ColumnDef::new(UserRegisterCache::CreatedAt).timestamp().not_null().extra("DEFAULT CURRENT_TIMESTAMP".to_owned()))
                 .to_owned(),
         ).await
     }
@@ -37,4 +39,6 @@ enum UserRegisterCache {
     Id,
     Email,
     Code,
+    UpdatedAt,
+    CreatedAt
 }

@@ -19,7 +19,7 @@ impl sea_orm_rocket::Pool for SeaOrmPool {
     type Connection = sea_orm::DatabaseConnection;
 
     async fn init(figment: &Figment) -> Result<Self, Self::Error> {
-        let config = figment.extract::<Config>().unwrap();
+        let config: Config = figment.extract::<Config>().unwrap();
         let mut options: ConnectOptions = config.url.into();
         options
             .max_connections(config.max_connections as u32)
@@ -28,7 +28,7 @@ impl sea_orm_rocket::Pool for SeaOrmPool {
         if let Some(idle_timeout) = config.idle_timeout {
             options.idle_timeout(Duration::from_secs(idle_timeout));
         }
-        let conn = sea_orm::Database::connect(options).await?;
+        let conn: sea_orm::DatabaseConnection = sea_orm::Database::connect(options).await?;
 
         Ok(SeaOrmPool { conn })
     }

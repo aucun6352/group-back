@@ -2,8 +2,10 @@
 
 use rocket::serde::{Serialize, Deserialize};
 use sea_orm::entity::prelude::*;
+use sea_orm_expand::QueryExpand;
+use sea_orm_expand_derive::QueryExpand;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, QueryExpand)]
 #[sea_orm(table_name = "user_register_cache")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -11,8 +13,8 @@ pub struct Model {
     #[sea_orm(unique)]
     pub email: String,
     pub code: String,
-    // pub updated_at: DateTime,
-    // pub created_at: DateTime,
+    pub updated_at: TimeDateTime,
+    pub created_at: TimeDateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]
